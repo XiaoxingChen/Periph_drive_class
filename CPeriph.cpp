@@ -2,7 +2,7 @@
   ******************************************************************************
   * @file    CPeriph.cpp
   * @author  Chenxx
-  * @version V1.1
+  * @version V1.2
   * @date    2015-09-05
   * @brief   This file defines the class CInte_Base, CDma_Base, CInte_Dma, CPeriph.
   ******************************************************************************/
@@ -24,14 +24,23 @@ void CInte_Base::NvicConfig(uint8_t PrePriority,uint8_t SubPriority)
 	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 	NVIC_Init(&NVIC_InitStructure);
 }
+void CInte_Base::Init(uint8_t PrePriority, uint8_t SubPriority)
+{
+	NvicConfig(PrePriority, SubPriority);
+}
+void CInte_Base::Init(uint8_t PrePriority, uint8_t SubPriority, uint32_t Periph_IT)
+{
+	NvicConfig(PrePriority, SubPriority);
+	EnableLine(Periph_IT);
+}
 /******************************************************************************
 * @brief   This part for CInte_Dma
 ******************************************************************************/
 
-CInte_Dma::CInte_Dma(const CDma_Base& ODma)
-	:CInte_Base(ODma.GetNVIC_IRQChannel_()),
-		DMAy_Channelx_(ODma.GetDMAy_Channelx_())
+CInte_Dma::CInte_Dma(const CDma_Base* pDma)
 {
+	NVIC_IRQChannel_ = pDma->GetNVIC_IRQChannel_();
+	Periphx_ = (void*)pDma->GetDMAy_Channelx_();
 }
 /******************************************************************************
 * @brief   This part for CDma_Base
@@ -96,7 +105,36 @@ void CDma_Base::Config(uint32_t PeriphAddr,
 //	DMA_Cmd(DMA1_Channel2, ENABLE);
 
 }
+void CDma_Base::Reboot(uint32_t ReloadMemAddr, u16 ReloadBufferSize)
+{
+	Disable();
+	
+	if(ReloadBufferSize != 0)
+	{
+		DMAy_Channelx_->CNDTR = ReloadBufferSize;
+		DMA_InitStructure_.DMA_BufferSize = ReloadBufferSize;
+	}
+	else	//ReloadBufferSize == 0, load the size that used last time
+	{
+		DMAy_Channelx_->CNDTR = DMA_InitStructure_.DMA_BufferSize;
+	}
+	
+	
+	if(ReloadMemAddr != NULL)
+	{
+		DMAy_Channelx_->CMAR = ReloadMemAddr;
+		DMA_InitStructure_.DMA_MemoryBaseAddr = ReloadMemAddr;
+	}
+	else
+		DMAy_Channelx_->CMAR = DMA_InitStructure_.DMA_MemoryBaseAddr;
+	
+	Enable();
+}
 /******************************************************************************
 * @brief   This part for CPeriph
 ******************************************************************************/
-
+void CPeriph::EmptyInit()
+{
+	while(1); //you should not call an empty initfunc!
+}
+//end of file
