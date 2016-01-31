@@ -2,7 +2,7 @@
   ******************************************************************************
   * @file    CUsart.h
   * @author  Chenxx
-  * @version V1.1
+  * @version V1.2
   * @date    2015-09-05
   * @brief   This file defines the CUsart class.
   ******************************************************************************/
@@ -22,23 +22,11 @@ class CInte_Usart
 public:
 	CInte_Usart()
 	{}
-	CInte_Usart(const CUsart& OUsart);
-		
-	inline void Init(uint8_t PrePriority, uint8_t SubPriority)
-	{
-		NvicConfig(PrePriority, SubPriority);
-	}
-	inline void Init(uint8_t PrePriority, uint8_t SubPriority, uint32_t USART_IT)
-	{
-		NvicConfig(PrePriority, SubPriority);
-		EnableLine(USART_IT);
-	}
-	void EnableLine(uint16_t USART_IT)
-		{USART_ITConfig(USART1, USART_IT, ENABLE);}
-	void DisableLine(uint16_t USART_IT)
-		{USART_ITConfig(USART1, USART_IT, DISABLE);}
-private:
-	USART_TypeDef* USARTx_;
+	CInte_Usart(const CUsart* pUsart);
+	virtual void EnableLine(uint32_t USART_IT)
+		{USART_ITConfig((USART_TypeDef*)Periphx_, USART_IT, ENABLE);}
+	virtual void DisableLine(uint32_t USART_IT)
+		{USART_ITConfig((USART_TypeDef*)Periphx_, USART_IT, DISABLE);}
 };
 /******************************************************************************
 * @brief   This part for CDma_Usart
@@ -58,24 +46,25 @@ public:
 	CDma_Usart(const CDma_Usart& other)
 		:CDma_Base(other.GetDMAy_Channelx_())		
 	{}
-	void PeriphConfig(void);
-	void Init(uint32_t PeriphAddr,
-							uint32_t MemAddr,
-							uint32_t DMA_DIR,
-							uint32_t BufferSize,
-							uint32_t PDataSize,	
-							uint32_t MDataSize,
-							uint32_t DMA_Mode,
-							CInte_Dma* OInte_Dma);
-private:
+	virtual ~CDma_Usart()
+	{
+		if (INTE != NULL) delete INTE;
+	}
+	virtual void Init(uint32_t PeriphAddr,
+		uint32_t MemAddr,
+		uint32_t DMA_DIR,
+		uint32_t BufferSize,
+		uint32_t PDataSize,	
+		uint32_t MDataSize,
+		uint32_t DMA_Mode,
+		CInte_Dma* new_Inte_Dma);
 };
 
 /******************************************************************************
 * @brief   This part for CUsart
 ******************************************************************************/
 class CUsart
-//	:public CPeriph<CInte_Usart, CDmaKit_Usart>
-	:public CPeriph<CInte_Usart, CDma_Usart, CUsart>
+	:public CPeriph
 {
 public:
 	friend void USART1_Init(void);
@@ -85,20 +74,52 @@ public:
 		DmaChRxd = USART_DMAReq_Rx
 	};
 	CUsart(USART_TypeDef* USARTx, void(*InitFunc)(void));
+	virtual ~CUsart()
+	{
+		if(DMA != NULL) delete DMA;
+		if(INTE != NULL) delete INTE;
+	}
+	void(* Init)();
 	void Config(u32 Baudrate);
 	void ClkConfig();
 	void PinConfig();
+	CDmaKit* DMA;
+	CInte_Usart* INTE;
 		
 	USART_TypeDef* Get_USARTx_(void) const
 		{return USARTx_;}
 	uint8_t Get_NVIC_IRQChannel_(void) const
 		{return NVIC_IRQChannel_;}
-	void printf(const char* str)
-		{DMASendStr(str);}
-	void DMASendArray(u8* array, u16 len);
 	DMA_Channel_TypeDef* DmaChCalc(DmaChType DmaCh) const;
+	virtual CDma_Base* Creat_CDma(int DmaCh) const
+	{
+		/* Periph Config */
+		int USART_DMAReq_Ch;
+		if(DmaCh == DmaChTxd)
+			USART_DMAReq_Ch = USART_DMAReq_Tx;
+		else if(DmaCh == DmaChRxd)
+			USART_DMAReq_Ch = USART_DMAReq_Rx;
+		else
+			while(1); //error!
+		USART_DMACmd(USARTx_, USART_DMAReq_Ch, ENABLE);
+		
+		return new CDma_Usart(DmaChCalc((DmaChType)DmaCh));
+	}
+	virtual void Destroy_CDma(int DmaCh) const
+	{
+		/* Periph Config */
+		int USART_DMAReq_Ch;
+		if(DmaCh == DmaChTxd)
+			USART_DMAReq_Ch = USART_DMAReq_Tx;
+		else if(DmaCh == DmaChRxd)
+			USART_DMAReq_Ch = USART_DMAReq_Rx;
+		else
+			while(1); //error!
+		USART_DMACmd(USARTx_, USART_DMAReq_Ch, DISABLE);
+		
+		delete DMA->handle(DmaCh);
+	}
 private:
-	void DMASendStr(const char* str);
 	USART_TypeDef* USARTx_;
 	uint8_t NVIC_IRQChannel_;
 };
@@ -119,6 +140,6 @@ private:
 /******************************************************************************
 * @brief   This part for extern declaration
 ******************************************************************************/
-//extern CUsart COM1;
+extern CUsart COM1;
 #endif
 /*End of File*/
