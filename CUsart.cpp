@@ -12,10 +12,11 @@
 /******************************************************************************
 * @brief   This part for CInte_Usart
 ******************************************************************************/
-CInte_Usart::CInte_Usart(const CUsart& OUsart)
-		:CInte_Base(OUsart.Get_NVIC_IRQChannel_()),
-		USARTx_(OUsart.Get_USARTx_())
-	{}
+CInte_Usart::CInte_Usart(const CUsart* pUsart)
+{
+	NVIC_IRQChannel_ = pUsart->Get_NVIC_IRQChannel_();
+	Periphx_ = (void*)pUsart->Get_USARTx_();
+}
 /******************************************************************************
 * @brief   This part for CDma_Usart
 ******************************************************************************/
@@ -26,9 +27,9 @@ void CDma_Usart::Init(uint32_t PeriphAddr,
 							uint32_t PDataSize,	
 							uint32_t MDataSize,
 							uint32_t DMA_Mode,
-							CInte_Dma* OInte_Dma)
+							CInte_Dma* new_Inte_Dma)
 {
-	INTE = OInte_Dma;
+	INTE = new_Inte_Dma;
 	ClkConfig();
 	Config(PeriphAddr,
 				MemAddr,
@@ -37,36 +38,13 @@ void CDma_Usart::Init(uint32_t PeriphAddr,
 				PDataSize,	
 				MDataSize,
 				DMA_Mode);
-	PeriphConfig();
 	Enable();
 }
-void CDma_Usart::PeriphConfig(void)
-{
-	if (DMAy_Channelx_ == DMA1_Channel4)
-		USART_DMACmd(USART1, USART_DMAReq_Tx, ENABLE);
-	else if	(DMAy_Channelx_ == DMA1_Channel5)
-		USART_DMACmd(USART1, USART_DMAReq_Rx, ENABLE);
-	else
-		while(1);
-}
-/******************************************************************************
-* @brief   This part for CDmaKit_Usart
-******************************************************************************/
-//CDmaKit_Usart::CDmaKit_Usart(const CUsart& OUsart)
-//		:OUsart_(OUsart)
-//{
-
-//}
-//void CDmaKit_Usart::add(CUsart::DmaChType DmaCh)
-//{
-//	registry_.push_back(
-//		kit<CDma_Usart>::Association(DmaCh, CDma_Usart(OUsart_.DmaChCalc(DmaCh))));
-//}
 /******************************************************************************
 * @brief   This part for CUsart
 ******************************************************************************/
-CUsart::CUsart(USART_TypeDef* USARTx, void(*InitFunc)(void))
-	:CPeriph(InitFunc), USARTx_(USARTx)
+CUsart::CUsart(USART_TypeDef* USARTx, void(*InitFunc)(void)):
+	Init(InitFunc),DMA(NULL),INTE(NULL),USARTx_(USARTx)
 {
 	if(USARTx_ == USART1)
 		NVIC_IRQChannel_ = USART1_IRQn;
@@ -135,14 +113,6 @@ void CUsart::Config(u32 Baudrate)
 
 	USART_Cmd(USARTx_, ENABLE); 
 }
-void CUsart::DMASendArray(u8* array, u16 len)
-{
-	DMA->handle(DmaChTxd).Reboot((uint32_t)array, len);
-}
-void CUsart::DMASendStr(const char* str)
-{
-	DMA->handle(DmaChTxd).Reboot((uint32_t)str, strlen(str));
-}
 DMA_Channel_TypeDef* CUsart::DmaChCalc(DmaChType DmaCh) const
 {
 	if(USARTx_ == USART1)
@@ -160,28 +130,28 @@ DMA_Channel_TypeDef* CUsart::DmaChCalc(DmaChType DmaCh) const
 /******************************************************************************
 * @brief   This part for Init Function
 ******************************************************************************/
-//void USART1_Init(void)
-//{
-//	CUsart& Usartx = COM1;
-//	Usartx.ClkConfig();
-//	Usartx.PinConfig();
-//	Usartx.Config(115200);
-//	
-////	Usartx.DMA = new CDmaKit_Usart(COM1);
-//	Usartx.DMA = new CDmaKit<CDma_Usart, CUsart>(COM1);
-//	COM1.DMA->add(CUsart::DmaChTxd);
+void USART1_Init(void)
+{
+	CUsart& Usartx = COM1;
+	Usartx.ClkConfig();
+	Usartx.PinConfig();
+	Usartx.Config(115200);
+	
+//	Usartx.DMA = new CDmaKit_Usart(COM1);
+	Usartx.DMA = new CDmaKit(&COM1);
+	COM1.DMA->add(CUsart::DmaChTxd);
 
-//	Usartx.DMA->handle(CUsart::DmaChTxd).Init((uint32_t)&(COM1.Get_USARTx_()->DR),
-//					(uint32_t)"a",
-//					DMA_DIR_PeripheralDST,
-//					1,
-//					DMA_MemoryDataSize_Byte,
-//					DMA_MemoryDataSize_Byte,
-//					DMA_Mode_Normal,
-//					new CInte_Dma(Usartx.DMA->handle(CUsart::DmaChTxd)));
-//	Usartx.DMA->handle(CUsart::DmaChTxd).INTE->Init(1,1/*,DMA_IT_TC*/);
-////	Usartx.INTE = new CInte_Usart(COM1);
-////	Usartx.INTE->Init(1,1,USART_IT_RXNE);
-//}
-//CUsart COM1(USART1, USART1_Init);
+	Usartx.DMA->handle(CUsart::DmaChTxd)->Init((uint32_t)&(COM1.Get_USARTx_()->DR),
+					(uint32_t)"a",
+					DMA_DIR_PeripheralDST,
+					1,
+					DMA_MemoryDataSize_Byte,
+					DMA_MemoryDataSize_Byte,
+					DMA_Mode_Normal,
+					new CInte_Dma(Usartx.DMA->handle(CUsart::DmaChTxd)));
+	Usartx.DMA->handle(CUsart::DmaChTxd)->INTE->Init(1,1/*,DMA_IT_TC*/);
+//	Usartx.INTE = new CInte_Usart(COM1);
+//	Usartx.INTE->Init(1,1,USART_IT_RXNE);
+}
+CUsart COM1(USART1, USART1_Init);
 /*End of File*/
