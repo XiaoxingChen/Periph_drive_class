@@ -9,10 +9,11 @@
 #ifndef __CSYSTICK_H
 #define __CSYSTICK_H
 #include "stm32f10x.h"
+#include "singleton.h"
 class CSysTick
 {	
 public:
-	CSysTick(uint32_t freq);
+	CSysTick();
 	inline void reset()
 	{
 		SysTick->VAL = 0;
@@ -30,9 +31,10 @@ public:
 		while((SysTick->CTRL & SysTick_CTRL_COUNTFLAG_Msk) == 0);
 	}
 	void SetFreq(uint32_t freq);
+	static uint32_t get_Freq();
 private:
 	
 };
-extern CSysTick StepTimer;
+typedef NormalSingleton<CSysTick> sysTick;
 #endif
 //end of file

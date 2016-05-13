@@ -1,19 +1,28 @@
 /**
 ******************************************************************************
-* @file    CSysTick.cpp 
+* @file    CSysTick.cpp
 * @author  Chenxx
 * @version V1.0
 * @date    2016-1-27
 * @brief   This file provides all the SysTick functions.
 ******************************************************************************/
 #include "CSysTick.h"
-CSysTick::CSysTick(uint32_t freq)
+#include "stddef.h"
+
+//
+//constructor
+//
+CSysTick::CSysTick()
 {
 	SysTick_CLKSourceConfig(SysTick_CLKSource_HCLK_Div8); //9MHz
 	stop();
 	reset();
-	SetFreq(freq);
+	SetFreq(10);	//default frequence 1kHz
 }
+
+//
+//void CSysTick::SetFreq(uint32_t freq)
+//
 void CSysTick::SetFreq(uint32_t freq)
 {
 	if( 9000000/freq > 0xFFFFFFul)
@@ -25,5 +34,13 @@ void CSysTick::SetFreq(uint32_t freq)
 		SysTick->LOAD = 9000000/freq;
 	}
 }
-CSysTick StepTimer(1000);
+
+//
+//uint32_t CSysTick::get_Freq()
+//
+uint32_t CSysTick::get_Freq()
+{
+	uint32_t freq = 9000000/SysTick->LOAD;
+	return freq;
+}
 //end of file
