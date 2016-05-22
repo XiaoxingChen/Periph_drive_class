@@ -67,38 +67,38 @@ void CUartConsole::InitSciGpio()
 	uint8_t GPIO_AF_USARTx;
 	GPIO_TypeDef *GPIOx;
 	
-	if(CONSOLE_IOGROUP == GROUP_A2)
-	{
+	#if CONSOLE_IOGROUP_A2
 		RCC_AHB1Periph_GPIOx = RCC_AHB1Periph_GPIOA;
 		GPIOx = GPIOA;
 		GPIO_PinSource_BASE = GPIO_PinSource2;
-	}	
-	else if(CONSOLE_IOGROUP == GROUP_A9)
-	{
+	#elif CONSOLE_IOGROUP_A9
 		RCC_AHB1Periph_GPIOx = RCC_AHB1Periph_GPIOA;
 		GPIOx = GPIOA;
 		GPIO_PinSource_BASE = GPIO_PinSource9;
-	}
-	else if(CONSOLE_IOGROUP == GROUP_B10)
-	{
+	#elif CONSOLE_IOGROUP_B10
 		RCC_AHB1Periph_GPIOx = RCC_AHB1Periph_GPIOB;
 		GPIOx = GPIOB;
 		GPIO_PinSource_BASE = GPIO_PinSource10;
-	}
-	else while(1); //undefined!
+	#else 
+		#error
+	#endif
 	
-	if(CONSOLE_UART == USART1)	GPIO_AF_USARTx = GPIO_AF_USART1;
-	else if(CONSOLE_UART == USART2)	GPIO_AF_USARTx = GPIO_AF_USART2;
-	else if(CONSOLE_UART == USART3)	GPIO_AF_USARTx = GPIO_AF_USART3;
-	else while(1); //undefined!
+	#if  CONSOLE_USE_UART1
+		GPIO_AF_USARTx = GPIO_AF_USART1;
+	#elif CONSOLE_USE_UART2	
+		GPIO_AF_USARTx = GPIO_AF_USART2;
+	#elif CONSOLE_USE_UART3	
+		GPIO_AF_USARTx = GPIO_AF_USART3;
+	#else 
+		#error
+	#endif 
 
-	/* open clock of MOSI MISO SCK nCS */
+	/* open clock of UART */
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOx, ENABLE);
 	
-	/* Config Pin: MOSI MISO SCK */
+	/* Config Pin: RXD TXD */
 	GPIO_PinAFConfig(GPIOx, GPIO_PinSource_BASE, GPIO_AF_USARTx);
 	GPIO_PinAFConfig(GPIOx, GPIO_PinSource_BASE + 1, GPIO_AF_USARTx);
-	GPIO_PinAFConfig(GPIOx, GPIO_PinSource_BASE + 2, GPIO_AF_USARTx);	
 	
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
@@ -114,10 +114,15 @@ void CUartConsole::InitSciGpio()
 void CUartConsole::InitSci()
 {
 	/* init clock of USART */
-	if(CONSOLE_UART == USART1) RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART1, ENABLE);
-	else if(CONSOLE_UART == USART2) RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART2, ENABLE);
-	else if(CONSOLE_UART == USART3) RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART3, ENABLE);
-	else while(1);
+	#if  CONSOLE_USE_UART1
+		RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART1, ENABLE);
+	#elif  CONSOLE_USE_UART2 
+		RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART2, ENABLE);
+	#elif  CONSOLE_USE_UART3  
+		RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART3, ENABLE);
+	#else 
+		#error
+	#endif
 	
 	USART_InitTypeDef USART_InitStructure;
 
@@ -190,5 +195,14 @@ int CUartConsole::printf(const char* fmt, ...)
 	DMA_Cmd(CONSOLE_TX_DMAST, ENABLE);
 	
 	return n;
+}
+
+//
+//int CUartConsole::getch()
+//
+int CUartConsole::getch()
+{
+	while(USART_GetFlagStatus(CONSOLE_UART, USART_FLAG_RXNE) == RESET);
+	return CONSOLE_UART->DR;
 }
 //end of file
