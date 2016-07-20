@@ -12,6 +12,8 @@
 #include "Singleton.h"
 
 //BSP MACROS
+#define CONSOLE_DMA_MODE		1
+//#define CONSOLE_NONEDMA_MODE	1
 #define CONSOLE_USE_UART1		1//change here
 #define CONSOLE_IOGROUP_A9	1//change here
 #define CONSOLE_TX_DMACH		DMA1_Channel4 //change here
@@ -39,14 +41,26 @@ public:
 	int printf(const char* fmt, ...) __attribute__((format(printf,2,3)));
 	int getch(void);
 	enum{TXBUF_SIZE = 100};
+	void postErr();
+	
+	#ifdef CONSOLE_NONEDMA_MODE
+	void run();
+	#endif
 	
 private:
 	void InitSciGpio();
 	void InitSci();
 
+	uint16_t overflowCounter_;
+
 	static char TxBuf_[TXBUF_SIZE];
-	char* bufback_ptr_;
+	char* bufback_ptr_;//Queue: [front, back)
+#ifdef CONSOLE_NONEDMA_MODE
+	static char vsnpritfBuf_[TXBUF_SIZE];
+	char* buffront_ptr_;//Queue: [front, back)
+#endif
 };
 typedef NormalSingleton<CUartConsole> Console;
+#define postErr(msg) printf("Error: %s(%d)-%s(): %s\r\n", __FILE__, __LINE__, __FUNCTION__, msg)
 #endif
 //end of file
