@@ -5,6 +5,8 @@
 * @date    2016-04-21
 * @brief   this file defines the Console function that can printf with uart.
 *	   This is for STM32F4.
+* release information: 
+*	2016/07/01: chenxx add noneDMA mode.
 ********************************************************************************/
 #ifndef _CUARTCONSOLE_H_
 #define _CUARTCONSOLE_H_
@@ -29,9 +31,11 @@
 //	UART4 	C10 			DMA1_Stream4
 
 //BSP MACROS
-#define CONSOLE_USE_UART1		1//change here
-#define CONSOLE_IOGROUP_A9	1//change here
-#define CONSOLE_TX_DMAST		DMA2_Stream7 //change here
+//#define CONSOLE_DMA_MODE		1
+#define CONSOLE_NONEDMA_MODE	1
+#define CONSOLE_USE_UART2			1//change here
+#define CONSOLE_IOGROUP_A2		1//change here
+#define CONSOLE_TX_DMAST			DMA1_Stream6 //change here
 
 #ifdef 	CONSOLE_USE_UART1 
 	#define 	CONSOLE_UART	USART1	
@@ -56,6 +60,10 @@ public:
 	int printf(const char* fmt, ...) __attribute__((format(printf,2,3)));
 	int getch(void);
 	enum{TXBUF_SIZE = 100};
+
+#ifdef CONSOLE_NONEDMA_MODE
+	void run();
+#endif
 	
 private:
 	void InitSciGpio();
@@ -63,9 +71,14 @@ private:
 	/* interrupt flag clear register */
 	volatile uint32_t* TXDMA_IFCR_;
 	uint32_t TXDMA_IFCR_MASK;
+	uint16_t overflowCounter_;
 
 	static char TxBuf_[TXBUF_SIZE];
-	char* bufback_ptr_;
+	char* bufback_ptr_;	//Queue: [front, back)
+#ifdef CONSOLE_NONEDMA_MODE
+	static char vsnpritfBuf_[TXBUF_SIZE];
+	char* buffront_ptr_;//Queue: [front, back)
+#endif
 };
 typedef NormalSingleton<CUartConsole> Console;
 #endif
