@@ -31,8 +31,8 @@
 //	UART4 	C10 			DMA1_Stream4
 
 //BSP MACROS
-//#define CONSOLE_DMA_MODE		1
-#define CONSOLE_NONEDMA_MODE	1
+#define CONSOLE_DMA_MODE		1
+//#define CONSOLE_NONEDMA_MODE	1
 #define CONSOLE_USE_UART2			1//change here
 #define CONSOLE_IOGROUP_A2		1//change here
 #define CONSOLE_TX_DMAST			DMA1_Stream6 //change here
@@ -60,6 +60,7 @@ public:
 	int printf(const char* fmt, ...) __attribute__((format(printf,2,3)));
 	int getch(void);
 	enum{TXBUF_SIZE = 100};
+	void postErr();
 
 #ifdef CONSOLE_NONEDMA_MODE
 	void run();
@@ -81,5 +82,6 @@ private:
 #endif
 };
 typedef NormalSingleton<CUartConsole> Console;
+#define postErr(msg) printf("Error: %s(%d)-%s(): %s\r\n", __FILE__, __LINE__, __FUNCTION__, msg)
 #endif
 //end of file

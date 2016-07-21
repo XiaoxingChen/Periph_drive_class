@@ -217,13 +217,14 @@ int CUartConsole::printf(const char* fmt, ...)
 	
 	return n;
 }
-#elif CONSOLE_NONEDMA_MODE
+
 /**
   * @brief  printf a string without DMA controller.
 	*					User should call the CUartConsole::run()
   * @param  None
   * @retval number of bytes were sent
   */
+#elif CONSOLE_NONEDMA_MODE
 int CUartConsole::printf(const char* fmt, ...)
 {
 	int32_t bytesInBuf = int32_t((uint32_t)bufback_ptr_-(uint32_t)buffront_ptr_);
@@ -287,12 +288,23 @@ int CUartConsole::getch()
 	return CONSOLE_UART->DR;
 }
 
-#ifdef CONSOLE_NONEDMA_MODE
 /**
-  * @brief  run
+  * @brief  postErr() to cheat the IDE to show the macro function
+	* @param  None
+  * @retval None
+  */
+#undef postErr
+void CUartConsole::postErr()
+{}
+#define postErr(msg) printf("Error: %s(%d)-%s(): %s\r\n", __FILE__, __LINE__, __FUNCTION__, msg)
+
+
+/**
+  * @brief  run. Valid only in NoneDMA mode
   * @param  None
   * @retval None
   */
+#ifdef CONSOLE_NONEDMA_MODE
 void CUartConsole::run()
 {
 	int32_t bytesInBuf = int32_t((uint32_t)bufback_ptr_-(uint32_t)buffront_ptr_);
