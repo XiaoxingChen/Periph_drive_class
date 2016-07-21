@@ -5,6 +5,8 @@
 * @date    2016-05-13
 * @brief   this file defines the Console function that can printf with uart.
 *	   This is for STM32F1.
+* release information:
+*	2016/07/21 chenxx: add postErr() macro function
 ********************************************************************************/
 #ifndef _CUARTCONSOLE_H_
 #define _CUARTCONSOLE_H_
